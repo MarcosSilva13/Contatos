@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Contatos:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/Contatos_jar</output-path>
+    <root id="archive" name="Contatos.jar">
+      <element id="module-output" name="Contatos" />
+    </root>
+  </artifact>
+</component>
