@@ -12,14 +12,16 @@ public class Screen extends JFrame {
     private JPanel panelLeft;
     private JPanel panelRight;
     private JList<String> listPeople;
-    private JButton btnNew;
-    private JButton btnSave;
+    private JButton btnSaveNew;
+    private JButton btnUpdate;
     private JTextField txtName;
     private JTextField txtEmail;
     private JTextField txtTelephone;
     private JLabel labelAge;
     private JTextField txtDateOfBirth;
     private JPanel panelMain;
+    private JButton btnAddNew;
+    private JButton btnDelete;
     private ArrayList<Person> people;
     private DefaultListModel<String> listPeopleModel;
 
@@ -31,21 +33,22 @@ public class Screen extends JFrame {
         people = new ArrayList<>();
         listPeopleModel = new DefaultListModel<>();
         listPeople.setModel(listPeopleModel);
-        btnSave.setEnabled(false);
-        btnNew.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnSave.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnUpdate.setEnabled(false);
+        btnDelete.setEnabled(false);
+        btnSaveNew.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnUpdate.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        btnNew.addActionListener(new ActionListener() {
+        btnSaveNew.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                btnNewClick(e);
+                btnSaveNewClick(e);
             }
         });
 
-        btnSave.addActionListener(new ActionListener() {
+        btnUpdate.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                btnSaveClick(e);
+                btnUpdateClick(e);
             }
         });
 
@@ -55,19 +58,50 @@ public class Screen extends JFrame {
                 listPeopleSelection(e);
             }
         });
+        btnAddNew.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnAddNewClick(e);
+            }
+        });
+        btnDelete.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                btnDeleteClick(e);
+            }
+        });
     }
 
-    public void btnNewClick(ActionEvent e) {
-        Person p = new Person(txtName.getText(),
-                txtEmail.getText(),
-                txtTelephone.getText(),
-                txtDateOfBirth.getText());
-
-        people.add(p);
-        refreshPeopleList();
+    public void btnAddNewClick(ActionEvent e) {
+        clearFields();
+        btnUpdate.setEnabled(false);
+        btnDelete.setEnabled(false);
     }
 
-    public void btnSaveClick(ActionEvent e) {
+    public void btnDeleteClick(ActionEvent e) {
+        int personNumber = listPeople.getSelectedIndex();
+        if (personNumber >= 0) {
+            people.remove(personNumber);
+            clearFields();
+            refreshPeopleList();
+            JOptionPane.showMessageDialog(null,
+                    "Contato excluído com sucesso!", "Confirmação", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+    public void btnSaveNewClick(ActionEvent e) {
+        if (!checkFields()) {
+            Person p = new Person(txtName.getText(),txtEmail.getText(),txtTelephone.getText(),txtDateOfBirth.getText());
+            people.add(p);
+            refreshPeopleList();
+            JOptionPane.showMessageDialog(null,
+                    "Contato adicionado com sucesso!", "Confimação", JOptionPane.INFORMATION_MESSAGE);
+        } else {
+            JOptionPane.showMessageDialog(null,
+                    "Todos os campos devem ser preenchidos!","Aviso", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    public void btnUpdateClick(ActionEvent e) {
         int personNumber = listPeople.getSelectedIndex();
         if (personNumber >= 0) {
             Person p = people.get(personNumber);
@@ -76,6 +110,8 @@ public class Screen extends JFrame {
             p.setPhoneNumber(txtTelephone.getText());
             p.setDateOfBirth(txtDateOfBirth.getText());
             refreshPeopleList();
+            JOptionPane.showMessageDialog(null,
+                    "Contato atualizado com sucesso!", "Confirmação", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -88,9 +124,11 @@ public class Screen extends JFrame {
             txtTelephone.setText(p.getPhoneNumber());
             txtDateOfBirth.setText(p.getDataOfBirth().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
             labelAge.setText(Integer.toString(p.getAge()) + " anos");
-            btnSave.setEnabled(true);
+            btnUpdate.setEnabled(true);
+            btnDelete.setEnabled(true);
         } else {
-            btnSave.setEnabled(false);
+            btnUpdate.setEnabled(false);
+            btnDelete.setEnabled(false);
         }
     }
     public void refreshPeopleList() {
@@ -103,6 +141,19 @@ public class Screen extends JFrame {
     public void addPerson(Person p) {
         people.add(p);
         refreshPeopleList();
+    }
+
+    private boolean checkFields() {
+        return txtName.getText().equals("") && txtTelephone.getText().equals("") && txtEmail.getText().equals("")
+                && txtDateOfBirth.getText().equals("");
+    }
+
+    private void clearFields() {
+        txtName.setText("");
+        txtEmail.setText("");
+        txtTelephone.setText("");
+        txtDateOfBirth.setText("");
+        labelAge.setText("0 anos");
     }
 
     public static void main(String[] args) {
@@ -119,6 +170,5 @@ public class Screen extends JFrame {
         screen.addPerson(p2);
         screen.addPerson(p3);
         screen.addPerson(p4);
-
     }
 }
