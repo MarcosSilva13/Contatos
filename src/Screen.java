@@ -1,11 +1,14 @@
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.time.format.DateTimeFormatter;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Scanner;
+import org.json.*;
+
 
 public class Screen extends JFrame {
     private JPanel panelTop;
@@ -38,70 +41,53 @@ public class Screen extends JFrame {
         btnSaveNew.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnUpdate.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
-        btnSaveNew.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnSaveNewClick(e);
-            }
-        });
+        btnSaveNew.addActionListener(e -> btnSaveNewClick());
 
-        btnUpdate.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnUpdateClick(e);
-            }
-        });
+        btnUpdate.addActionListener(e -> btnUpdateClick());
 
-        listPeople.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                listPeopleSelection(e);
-            }
-        });
-        btnAddNew.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnAddNewClick(e);
-            }
-        });
-        btnDelete.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                btnDeleteClick(e);
-            }
-        });
+        listPeople.addListSelectionListener(e -> listPeopleSelection());
+
+        btnAddNew.addActionListener(e -> btnAddNewClick());
+
+        btnDelete.addActionListener(e -> btnDeleteClick());
     }
 
-    public void btnAddNewClick(ActionEvent e) {
+    public void btnAddNewClick() {
         clearFields();
         btnUpdate.setEnabled(false);
         btnDelete.setEnabled(false);
     }
 
-    public void btnDeleteClick(ActionEvent e) {
+    public void btnDeleteClick() {
         int personNumber = listPeople.getSelectedIndex();
-        if (personNumber >= 0) {
+        int option = JOptionPane.showConfirmDialog(null, "Deseja realmente excluir este contato?",
+                "Confirmação", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+        if (personNumber >= 0 && option == 0) {
             people.remove(personNumber);
             clearFields();
             refreshPeopleList();
+            saveData();
             JOptionPane.showMessageDialog(null,
                     "Contato excluído com sucesso!", "Confirmação", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-    public void btnSaveNewClick(ActionEvent e) {
+    public void btnSaveNewClick() {
         if (!checkFields()) {
             Person p = new Person(txtName.getText(),txtEmail.getText(),txtTelephone.getText(),txtDateOfBirth.getText());
             people.add(p);
-            refreshPeopleList();
-            JOptionPane.showMessageDialog(null,
-                    "Contato adicionado com sucesso!", "Confimação", JOptionPane.INFORMATION_MESSAGE);
+            if (saveData()) {
+                refreshPeopleList();
+                JOptionPane.showMessageDialog(null,
+                        "Contato adicionado com sucesso!", "Confimação", JOptionPane.INFORMATION_MESSAGE);
+            }
         } else {
             JOptionPane.showMessageDialog(null,
                     "Todos os campos devem ser preenchidos!","Aviso", JOptionPane.WARNING_MESSAGE);
         }
     }
 
-    public void btnUpdateClick(ActionEvent e) {
+    public void btnUpdateClick() {
         int personNumber = listPeople.getSelectedIndex();
         if (personNumber >= 0) {
             Person p = people.get(personNumber);
@@ -110,20 +96,21 @@ public class Screen extends JFrame {
             p.setPhoneNumber(txtTelephone.getText());
             p.setDateOfBirth(txtDateOfBirth.getText());
             refreshPeopleList();
+            saveData();
             JOptionPane.showMessageDialog(null,
                     "Contato atualizado com sucesso!", "Confirmação", JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
-    public void listPeopleSelection(ListSelectionEvent e) {
+    public void listPeopleSelection() {
         int personNumber = listPeople.getSelectedIndex();
         if (personNumber >= 0){
             Person p = people.get(personNumber);
             txtName.setText(p.getName());
             txtEmail.setText(p.getEmail());
             txtTelephone.setText(p.getPhoneNumber());
-            txtDateOfBirth.setText(p.getDataOfBirth().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-            labelAge.setText(Integer.toString(p.getAge()) + " anos");
+            txtDateOfBirth.setText(p.getDateOfBirthString());
+            labelAge.setText(p.getAge() + " anos");
             btnUpdate.setEnabled(true);
             btnDelete.setEnabled(true);
         } else {
@@ -134,7 +121,6 @@ public class Screen extends JFrame {
     public void refreshPeopleList() {
         listPeopleModel.removeAllElements();
         for (Person p: people) {
-            //System.out.println("Adicionando pessoa na lista: " + p.getName());
             listPeopleModel.addElement(p.getName());
         }
     }
@@ -144,8 +130,8 @@ public class Screen extends JFrame {
     }
 
     private boolean checkFields() {
-        return txtName.getText().equals("") && txtTelephone.getText().equals("") && txtEmail.getText().equals("")
-                && txtDateOfBirth.getText().equals("");
+        return txtName.getText().equals("") || txtTelephone.getText().equals("") || txtEmail.getText().equals("")
+                || txtDateOfBirth.getText().equals("");
     }
 
     private void clearFields() {
@@ -156,12 +142,62 @@ public class Screen extends JFrame {
         labelAge.setText("0 anos");
     }
 
+    private boolean saveData() {
+        JSONArray jsonArray = new JSONArray();
+        for (Person person : people) {
+            JSONObject jsonObject = new JSONObject(person);
+            jsonArray.put(jsonObject);
+        }
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("Contatos.txt"))) {
+            bw.write(jsonArray.toString());
+            return true;
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(null, "Erro ao salvar o contato",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+    }
+
+    private ArrayList<Person> loadData() {
+        StringBuilder sb = new StringBuilder();
+        ArrayList<Person> results = new ArrayList<>();
+
+        try (Scanner reader = new Scanner(new FileReader("Contatos.txt"))) {
+            while (reader.hasNextLine()) {
+                sb.append(reader.nextLine());
+            }
+
+            JSONArray jsonArray = new JSONArray(sb.toString());
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject = jsonArray.getJSONObject(i);
+                Person p = new Person(
+                        jsonObject.getString("name"),
+                        jsonObject.getString("email"),
+                        jsonObject.getString("phoneNumber"),
+                        jsonObject.getString("dateOfBirthString")
+                );
+                results.add(p);
+            }
+            return results;
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(null, "Não foi possível carregar os contatos!",
+                    "Erro", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
+    }
+
     public static void main(String[] args) {
         Screen screen = new Screen();
         screen.setVisible(true);
         screen.setLocationRelativeTo(null);
 
-        Person p1 = new Person("Marcos Antônio", "marcos@gmail.com", "(33)91111-1111", "13/03/1998");
+        for (Person p: Objects.requireNonNull(screen.loadData())) {
+            screen.addPerson(p);
+        }
+
+        /*Person p1 = new Person("Marcos Antônio", "marcos@gmail.com", "(33)91111-1111", "13/03/1998");
         Person p2 = new Person("João da Silva", "joao@gmail.com", "(33)92222-2222", "01/03/1995");
         Person p3 = new Person("Suelen Rocha", "suelen@gmail.com", "(33)93333-3333", "01/01/2000");
         Person p4 = new Person("Joyce dos Santos", "joyce@gmail.com", "(33)94444-4444", "06/10/2001");
@@ -169,6 +205,6 @@ public class Screen extends JFrame {
         screen.addPerson(p1);
         screen.addPerson(p2);
         screen.addPerson(p3);
-        screen.addPerson(p4);
+        screen.addPerson(p4);*/
     }
 }

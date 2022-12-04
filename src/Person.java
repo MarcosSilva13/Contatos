@@ -50,6 +50,10 @@ public class Person {
         return dataOfBirth;
     }
 
+    public String getDateOfBirthString() {
+        return this.dataOfBirth.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+    }
+
     public void setDataOfBirth(LocalDate dataOfBirth) {
         this.dataOfBirth = dataOfBirth;
     }
