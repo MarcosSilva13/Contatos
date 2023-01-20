@@ -1,3 +1,3 @@
 # Contatos
-Lista de contados com (GUI - Graphical User Interface).<br>
+Lista de contatos com (GUI - Graphical User Interface).<br>
 (Praticando java swing no intellij).
